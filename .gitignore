@@ -18,4 +18,9 @@
 *.snm
 *.vrb
 
-.vscode/
+# Ignore all VS Code configs
+.vscode/*
+# But keep settings and extension
+!.vscode/settings.json
+!.vscode/extensions.json
+
