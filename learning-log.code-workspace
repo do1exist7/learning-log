@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "Isomorphism between inner product spaces of R^n"
+		},
+		{
+			"path": "Complex solutions of differential equations"
+		}
+	],
+	"settings": {
+		"latex-workshop.hover.preview.enabled": true,
+		"latex-workshop.view.pdf.viewer": "tab",
+		"latex-workshop.synctex.afterBuild.enabled": true
+	}
+}

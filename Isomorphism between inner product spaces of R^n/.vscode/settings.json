@@ -1,12 +1,18 @@
 {
   "files.exclude": {
-  "**/*.aux": true,
-  "**/*.log": true,
-  "**/*.fls": true,
-  "**/*.fdb_latexmk": true,
-  "**/*.synctex.gz": true,
+    "**/*.aux": true,
+    "**/*.log": true,
+    "**/*.fls": true,
+    "**/*.xdv": true,
+    "**/*.fdb_latexmk": true,
+    "**/*.synctex.gz": true
+  },
+  "latex-utilities.mathPreview.enable": true,
+  "latex-utilities.mathPreview.scale": 1.4,
+  "latex-utilities.mathPreview.fontSize": 12,
+  "latex-workshop.hover.preview.enabled": true,
   "latex-workshop.latex.autoBuild.run": "onSave",
-  "latex-workshop.view.pdf.viewer": "tab",  // or "external" or "browser"
+  "latex-workshop.view.pdf.viewer": "tab",
   "latex-workshop.synctex.afterBuild.enabled": true,
   "latex-workshop.latex.recipes": [
     {
