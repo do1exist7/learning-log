@@ -1,0 +1,269 @@
+% =================================================================
+% This is an assignment report template (in LaTeX) for the following course:
+% PHYS 421 Parallel Computing
+% Instructors: Sergiy Bubin, Bekdaulet Shukirgaliyev
+% Version: 2025.08.10
+% =================================================================
+
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Encoding, fonts, language ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+
+% ---------- Geometry & spacing ----------
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{parskip} % space between paragraphs, no indent
+
+% ---------- Math & symbols ----------
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{siunitx}
+\sisetup{detect-all=true}
+
+% ---------- Tables & graphics ----------
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{mwe} % provides example-image-a
+\usepackage{hologo}
+
+% ---------- Hyperlinks & clever references ----------
+%\usepackage[hidelinks]{hyperref}
+\usepackage[colorlinks=true,urlcolor=blue,bookmarks=true,citecolor=magenta,breaklinks=true,pdftex]{hyperref}
+\usepackage[nameinlink,capitalise]{cleveref}
+
+% ---------- Code listings (default: listings) ----------
+\usepackage{listings}
+\lstdefinestyle{pcstyle}{
+  basicstyle=\ttfamily\footnotesize,  %change \footnotesize to \small if the font in code snippets appears too small for reading
+  numberstyle=\tiny, numbers=left, numbersep=8pt,
+  showstringspaces=false, showtabs=false, showspaces=false,
+  breaklines=true, frame=single, rulecolor=\color{black!20},
+  keywordstyle=\color{blue!90!black},
+  commentstyle=\color{green!65!black},
+  stringstyle=\color{orange!80!black},
+  tabsize=2,
+  captionpos=b
+}
+\lstset{style=pcstyle}
+
+% ---------- Optional: minted for code (requires shell-escape) ----------
+% To use minted on Overleaf: Menu -> Latex -> Enable shell escape.
+% Then uncomment the two lines below and comment out the listings section above.
+% \usepackage[outputdir=_minted,cache=false]{minted}
+% \setminted{fontsize=\small,breaklines,frame=single}
+
+\graphicspath{ {./figures/} }
+
+% ---------- PGFPlots for plots ----------
+\usepackage{gincltex}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{pgfplotstable}
+\usepackage{lmodern}   % For Latin Modern fonts, which defines \mathdefault
+\def\mathdefault#1{#1}
+\usepgflibrary{plotmarks}
+\usetikzlibrary{calc}
+\usetikzlibrary{positioning,arrows.meta}
+
+% ---------- Bibliography ----------
+% \usepackage[
+%   backend=biber,
+%   style=numeric-comp, % compress ranges like [1–3]
+%   sorting=none,
+%   sortcites=true      % sort inside each \cite{...}
+% ]{biblatex}
+% \addbibresource{references.bib}
+
+% ---------- Utilities ----------
+\usepackage{etoolbox} % for \IfFileExists
+
+% ---------- Custom metadata commands ----------
+% Replace X with the actual assignment number
+\newcommand{\assignmentnumber}{1}
+% Insert actual report title
+\newcommand{\assignmenttitle}{Matrix-matrix multiplication performance comparison}
+% Insert your name
+\newcommand{\studentname}{Dias Suleimenov}
+% Replace XXXXXXXXX with your actual Student ID
+\newcommand{\studentid}{202158836}
+% Insert course code: PHYS 421, PHYS 521, or PHYS 721
+\newcommand{\coursecode}{PHYS 421}  
+% Insert course name: Parallel Computing or Parallel Programming for Scientific Computing
+\newcommand{\coursename}{Parallel Computing} 
+
+\newcommand{\honor}{I affirm that this work complies with Nazarbayev University academic integrity policies and the policies regarding the use of AI tools outlined in the course syllabus}
+
+% ---------- Title ----------
+\title{Assignment Report \#\assignmentnumber \\ \assignmenttitle}
+\author{Student Name: \studentname \ (ID: \studentid) \\ Course: \coursecode \ \coursename
+}
+\date{Submitted: \today}
+
+% =================================================================
+\begin{document}
+\maketitle
+
+\begin{center}
+{Software packages used:} \\
+\begin{tabular}{|l|l|}
+\hline
+g++ 13.2.0               &  Main code \\
+OpenBLAS  0.3.26          &  Fast matrix multiplication \\
+Python 3.12.3             &  Main code \\
+NumPy 2.3.2                &  Fast matrix multiplication \\
+Matplotlib 3.8.0          &  Plotting \\
+Jupyter Notebook    &  Data analysis \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+{AI tools used:} \\
+\begin{tabular}{|l|l|}
+\hline
+Github Copilot      & Coding assistance \\
+\hline
+\end{tabular}
+\end{center}
+\vspace{2em}
+
+\begin{abstract}
+\noindent This report investigates the performance of six different matrix multiplication methods, implemented in C++ and Python. The methods include naive triple loop algorithms, blocked matrix multiplication, and optimized libraries such as OpenBLAS and NumPy. The execution time of each method is measured across varying matrix sizes, and the optimal block size for blocked multiplication is determined experimentally. The results indicate that optimized libraries significantly outperform naive implementations, with the best methods achieving around $58-66\%$ of the theoretical peak performance of the CPU. The performance of all methods scales as $O(n^3)$, consistent with theoretical expectations.
+\end{abstract}
+
+% =================================================================
+
+\section{Introduction}
+
+The matrix multiplication is important algorithm used in many applications. Matrix multiplication is defined in such way:
+
+$$
+A =
+\begin{pmatrix}
+   A_{11}   &   A_{12}   &   \cdots &   A_{1n}  \\
+   A_{21}   &   A_{22}   &   \cdots &   A_{2n}  \\
+   \vdots   &   \vdots   &   \ddots &   \vdots  \\
+   A_{n1}   &   A_{n2}   &   \cdots &   A_{nn}  \\      
+\end{pmatrix},
+\qquad
+B =
+\begin{pmatrix}
+   B_{11}   &   B_{12}   &   \cdots &   B_{1n}  \\
+   B_{21}   &   B_{22}   &   \cdots &   B_{2n}  \\
+   \vdots   &   \vdots   &   \ddots &   \vdots  \\
+   B_{n1}   &   B_{n2}   &   \cdots &   B_{nn}  \\      
+\end{pmatrix}.
+$$
+Their product, $C = AB$, is then defined as
+$$
+C = 
+\begin{pmatrix}
+\sum_{k=1}^{n} A_{1k}B_{k1} & \cdots & \sum_{k=1}^{n} A_{1k}B_{kn} \\
+\vdots & \ddots & \vdots \\
+\sum_{k=1}^{n} A_{nk}B_{k1} & \cdots & \sum_{k=1}^{n} A_{nk}B_{kn}
+\end{pmatrix}.
+$$
+
+
+This report investigates performance of 6 matrix multiplication methods. First 4 methods are implemented in C++, while last 2 methods are implemented in Python. The methods are as follows:
+\begin{enumerate}
+  \item Naive triple loop algorithm
+  \item Naive triple loop with swapped indices
+  \item Blocked matrix multiplication
+  \item OpenBLAS dgemm
+  \item Naive Python triple loop
+  \item NumPy dot function
+\end{enumerate}
+
+% The theoretical prediction of performance for all methods is $O(n^3)$, where n is the size of the matrix. The optimal block size for blocked matrix multiplication is expected to be around , where L1_size is the size of L1 cache in bytes and sizeof_double is the size of double precision floating point number in bytes.
+
+The time performance each method is measured. The optimal block size for blocked matrix multiplication is also determined experimentally. The performance of the methods is compared and discussed.
+
+\section{Methodology}
+
+The methods 1-4 were written using C++11 and methods 5-6 on Python 3.12.3. The C++ codes were compiled using g++ 13.3.0 with -O3 optimization flag. The OpenBLAS library version 0.3.26 was used for method 4. The Python codes were run in Jupyter Notebook using NumPy 2.3.2 library. For plotting Matplotlib library was used. The hardware environment was a laptop with Intel i7-8565U CPU, 16 GB RAM, running Ubuntu 24.04 LTS on WSL2.
+
+In order to measure the performance of the methods, the \verb|std::chrono| library was used for C++ codes and \verb|%timeit| magic command was used for Python codes. The time of execution was measured over $N = 5$ runs and the average and standard deviation were calculated. The block size for blocked matrix multiplication was varied to find the optimal block size. The matrix sizes were varied from 100 to 2000 with a step of 100 for C++ and NumPy methods. The results were tabulated and plotted using error bars to show the standard deviation.
+
+\section{Results}
+\begin{figure}[H]
+    \centering
+    \input{figures/matrix_size_vs_time.pgf}
+    \caption{Execution time vs matrix size for different methods. Error bars represent standard deviation over N runs.}
+    \label{fig:results_n_vs_method}
+  \end{figure}
+  
+  \begin{figure}
+    \centering
+    \input{figures/block_size_vs_time.pgf}
+
+    \caption{Execution time vs block size for Method 4 (Blocked matrix multiplication) at matrix size n=1200. Error bars represent standard deviation over N runs.}
+    \label{fig:results_nb_vs_method4}
+  \end{figure}
+
+
+From the plot it can be seen that method 6 (NumPy dot function) and method 4 (OpenBLAS dgemm) are fastest, method 3 (Blocked matrix multiplication), while method 1 (Naive triple loop) is faster than method 2 (Naive triple loop with swapped indices). Surprisingly, method 5 naive triple loop written in Python with NumPy arrays, work a bit faster than both algorithms in C++, maybe it can be explained, by inner optimizations of NumPy library. The optimal block size for method 4 is found to be 20. The performance of all methods scales as $O(n^3)$ as expected.
+
+\section{Discussion}
+L1 cache of Intel i7-8565U CPU is 128 kB, so the optimal block size can be estimated as follows:
+$$\text{Optimal block size} \approx \sqrt{\frac{\text{L1 cache size}}{3 \times \text{sizeof(double)}}} = \sqrt{\frac{128 \text{kB}}{3 \times 8 \text{B}}} \approx 73.$$
+However, the optimal block size found in the experiments is 20, which is less than the expected value. This discrepancy could be due to various factors not accounted for in the simple estimation. 
+
+In order to estimate how efficient the algorithms are performing, the rough estimate of GFLOPS can be made. Single matrix multiplication takes $n^3$ multiplications and $n^2 (n+1)$ additions, however because CPU have Fused Multiply-Add (FMA) operation, thus only both operation counted as one, thus FLOP $= n^3$. Now dividing this amount to average time for single multiplication, we finally get rough estimate of FLOPS.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{l|c}
+    Method & GFLOPS \\
+    \hline 
+    Method 1 &    0.0009 \\
+    Method 2 &    0.0005 \\
+    Method 3 &    1.3674 \\
+    Method 4 &   24.3552 \\
+    Method 5 &  0.22866 \\
+    Method 6 &   21.6175 \\
+  \end{tabular}
+  \caption{Rough estimate of GFLOPS per method, done by averaging GFLOPS for every matrix size.}
+\end{table}
+
+Theoretically, Intel i7-8565U CPU can perform $1 \text{ core} \times 4.60 \text{ GHz} \times 8 \text{ ops/cycle} \approx 36.8 \text{ GFLOPS}$ Thus, best algorithms covered in paper. namely Method 4 (BLAS dgemm) and Method 6 (NumPy) utilizes $\approx 58-66\% $ of total performance of the processor. 
+
+\section{Conclusion}
+In this report, the performance of six matrix multiplication methods was investigated. The results showed that the NumPy dot function and OpenBLAS dgemm were the fastest methods, while the naive triple loop methods were significantly slower. The optimal block size for blocked matrix multiplication was found to be 20, which is less than the estimated value based on L1 cache size. The performance of all methods scaled as $O(n^3)$ as expected. The best performing methods achieved around 58-66\% of the theoretical peak performance of the CPU.
+
+\appendix
+\section{Reproducibility}
+To install libraries on Ubuntu, run the following commands:
+\begin{lstlisting}[language=bash]
+sudo apt update
+sudo apt install g++ libopenblas-dev python3 python3-pip
+pip3 install -r requirements.txt
+\end{lstlisting}
+
+To compile C++ codes, run the following commands:
+\begin{lstlisting}[language=bash]
+  ./build.sh
+\end{lstlisting}
+
+To run C++ codes, run the following commands:
+\begin{lstlisting}[language=bash]
+  OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 ./methodX --n 2000 --nb 20
+\end{lstlisting}
+where X is the method number (1-4), \verb|--n| is the matrix size, and \verb|--nb| is the block size (only for method 3).
+
+To run Python codes, run the following commands:
+\begin{lstlisting}[language=bash]
+  jupyter notebook
+\end{lstlisting}
+and open \verb|table.ipynb| file.
+% \subsection{Hardware and Software environment}
+% \subsection{Build and Run Instructions}
+
+\end{document}

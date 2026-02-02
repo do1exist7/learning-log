@@ -1,0 +1,217 @@
+% =================================================================
+% This is an assignment report template (in LaTeX) for the following course:
+% PHYS 421 Parallel Computing
+% Instructors: Sergiy Bubin, Bekdaulet Shukirgaliyev
+% Version: 2025.08.10
+% =================================================================
+
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Encoding, fonts, language ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+
+% ---------- Geometry & spacing ----------
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{parskip} % space between paragraphs, no indent
+
+% ---------- Math & symbols ----------
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{siunitx}
+\sisetup{detect-all=true}
+\newcommand{\bigO}{\mathcal{O}}
+
+% ---------- Tables & graphics ----------
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{pgfplotstable} % The main package for reading CSV files
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{mwe} % provides example-image-a
+\usepackage{hologo}
+\usepackage{longtable}
+
+% ---------- Hyperlinks & clever references ----------
+%\usepackage[hidelinks]{hyperref}
+\usepackage[colorlinks=true,urlcolor=blue,bookmarks=true,citecolor=magenta,breaklinks=true,pdftex]{hyperref}
+\usepackage[nameinlink,capitalise]{cleveref}
+
+% ---------- Code listings (default: listings) ----------
+\usepackage{listings}
+\lstdefinestyle{pcstyle}{
+  basicstyle=\ttfamily\footnotesize,  %change \footnotesize to \small if the font in code snippets appears too small for reading
+  numberstyle=\tiny, numbers=left, numbersep=8pt,
+  showstringspaces=false, showtabs=false, showspaces=false,
+  breaklines=true, frame=single, rulecolor=\color{black!20},
+  keywordstyle=\color{blue!90!black},
+  commentstyle=\color{green!65!black},
+  stringstyle=\color{orange!80!black},
+  tabsize=2,
+  captionpos=b
+}
+\lstset{style=pcstyle}
+
+% ---------- Optional: minted for code (requires shell-escape) ----------
+% To use minted on Overleaf: Menu -> Latex -> Enable shell escape.
+% Then uncomment the two lines below and comment out the listings section above.
+% \usepackage[outputdir=_minted,cache=false]{minted}
+% \setminted{fontsize=\small,breaklines,frame=single}
+
+
+% ---------- PGFPlots for plots ----------
+\usepackage{gincltex}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{pgfplotstable}
+\usepackage{lmodern}   % For Latin Modern fonts, which defines \mathdefault
+\def\mathdefault#1{#1}
+\usepgflibrary{plotmarks}
+\usetikzlibrary{calc}
+\usetikzlibrary{positioning,arrows.meta}
+
+% ---------- Bibliography ----------
+% \usepackage[
+%   backend=biber,
+%   style=numeric-comp, % compress ranges like [1–3]
+%   sorting=none,
+%   sortcites=true      % sort inside each \cite{...}
+% ]{biblatex}
+% \addbibresource{references.bib}
+
+% ---------- Utilities ----------
+\usepackage{etoolbox} % for \IfFileExists
+
+% ---------- Custom metadata commands ----------
+% Replace X with the actual assignment number
+\newcommand{\assignmentnumber}{4}
+% Insert actual report title
+\newcommand{\assignmenttitle}{Zooming In on the Mandelbrot Set}
+% Insert your name
+\newcommand{\studentname}{Dias Suleimenov}
+% Replace XXXXXXXXX with your actual Student ID
+\newcommand{\studentid}{202158836}
+% Insert course code: PHYS 421, PHYS 521, or PHYS 721
+\newcommand{\coursecode}{PHYS 421}  
+% Insert course name: Parallel Computing or Parallel Programming for Scientific Computing
+\newcommand{\coursename}{Parallel Computing} 
+
+\newcommand{\honor}{I affirm that this work complies with Nazarbayev University academic integrity policies and the policies regarding the use of AI tools outlined in the course syllabus}
+
+% ---------- Title ----------
+\title{Assignment Report \#\assignmentnumber \\ \assignmenttitle}
+\author{Student Name: \studentname \ (ID: \studentid) \\ Course: \coursecode \ \coursename
+}
+\date{Submitted: \today}
+
+% =================================================================
+\begin{document}
+\maketitle
+\begin{center}
+{Software packages used:} \\
+\begin{tabular}{|l|l|}
+\hline
+GCC/13.3.0 &  Main compiler \\
+OpenMPI/5.0.5 & OpenMPI library \\
+Python 3.12.3 + Matplotlib 3.10.7 & Visualization \\ 
+\hlin
+\end{tabular}
+\end{center}
+
+\begin{center}
+{AI tools used:} \\
+\begin{tabular}{|l|l|}
+\hline
+Gemini 2.5 Pro      & Code generation, script writing \\
+Copilot      & Code generation, script writing \\
+\hline
+\end{tabular}
+\end{center}
+\vspace{2em}
+
+\begin{abstract}
+The report investigates the parallelization of the Mandelbrot set generation using a master-worker algorithm implemented in C++ with OpenMPI. The performance is evaluated by measuring execution times across varying numbers of processes. The results demonstrate significant speedup and high efficiency, with a peak efficiency of 96.2\% at 16 processes and a maximum speedup of 56.7x at 64 processes. The findings highlight the effectiveness of the parallelization approach while also noting the overhead associated with lower process counts.
+
+\end{abstract}
+
+% =================================================================
+
+\section{Introduction}
+The Mandelbrot set is one of the simplest and best-known examples of a fractal structure.  
+It is defined as the set of complex numbers $\{c\}$ for which the sequence
+
+$$
+z_{n+1} = z_n^2 + c,
+$$
+
+does not diverge to infinity when iterated starting from $z_0 = c$. That is, the sequence of complex numbers $z_0, z_1, z_2, \ldots, z_n$ remains bounded in magnitude as $n \to \infty$.
+
+In this report, we explore the efficiency of proposed parallelized algorithm of Mandelbrot escape-time algorithm.
+
+\section{Methodology}
+The generation of Mandelbrot set is done used escape-time algorithm, for each pixel (representing some complex number) it is measured how much iterations it took before exceeding $|z| > 2$. Then the resulted set of escape-times used for coloring the mandelbrot set. 
+
+In order to implement parallelized generator of Mandelbrot set, the library OpenMPI and C++ language was used. Algorithm works in following way: the master-worker slices grid of pixels to blocks and sends it to slave-workers. Where slave-workers compute their assigned blocks and send the results back to the master process, when all blocks for frames are collected the master colors the image and saves it.
+
+The scalability of the algorithm is analyzed by measuring time (using bash command \verb|time|) required for processing with given ammount of cores. The serial code is used as baseline for comparison.
+
+
+% - The Mandelbrot escape algorithm is implemented in C++ using OpenMPI for parallelization.
+% - The master-worker slice images to blocks and sends it to slave-workers. Where slave-workers compute their assigned blocks and send the results back to the master process, where it saves it.
+% - The performance of the parallelized algorithm is evaluated by measuring the execution time for different process counts using time command in bash script.
+% - The scalability of the algorithm is analyzed by plotting the speedup and efficiency as functions of the number of processes.
+
+
+\section{Results} 
+% - The video of the generated Mandelbrot set with zooming can be found at repository.
+% - Image of mandelbrot set
+% - Table of execution times for different process counts
+
+The videos of the generated Mandelbrot set with zooming can be found at \href{https://github.com/NU-PHYS421-2025F/assignment-4-do1exist7/report}{repository}.
+
+\begin{figure}[h!] 
+    \centering
+    \includegraphics[width=6.0in]{mandelbrot3000x2500.png}
+    \caption{Image of Mandelbrot set covering the area $-2 < x < 1$, $-1.25 < y < 1.25$ and the depth of iteration $n_\text{max} = 1000$.}
+    \label{fig:mandelbrot}
+\end{figure}
+
+
+\begin{table}[h!]
+\centering
+\caption{Parallel performance for following parameters: $n_{frames}=20$, $N_x=3840$, $N_y=2160$, $n_{max} =5000$.}
+\label{tab:performance_serial_base}
+\begin{tabular}{cccc}
+\hline
+\textbf{\# of Processes (P)} & \textbf{Avg. Time (s)} & \textbf{Speedup} & \textbf{Efficiency (\%)} \\ \hline
+1 & 1858.00 & 1.00 & 100.0 \\
+2 & 1797.56 & 1.03 & 51.7 \\
+4 & 609.25 & 3.05 & 76.2 \\
+8 & 263.32 & 7.06 & 88.2 \\
+16 & 120.68 & 15.40 & 96.2 \\
+32 & 61.14 & 30.39 & 95.0 \\
+64 & 32.78 & 56.67 & 88.6 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[!h]
+    \centering
+    \input{performance_graphs_pandas.pgf}
+    \caption{The speedup and efficiency of parallelized algorithm relative to number of processes.}
+    \label{fig:performance}
+\end{figure}
+
+
+\section{Discussion}
+As can be see from Figure \ref{fig:performance} and Table \ref{tab:performance_serial_base}, the growth of efficiency is not linear and it is not unexpected. Because factually parallelized version uses $N-1$ slave workers for computation, and one master worker for saving data. What is more interesting that efficiency really high with increase of processes, especially at 16-32 processes. This may be caused due to improved cache hit rate as the chunks of arrays to process is decreased. However after that, it decreasing, which may suggest on the increased overhead of communication.
+
+\section{Conclusion}
+In this report a Mandelbrot set generator was successfully parallelized using a C++/MPI master-worker algorithm, and its scalability was evaluated. The implementation demonstrated excellent performance, achieving a peak efficiency of $96.2\%$ with 16 processes and a maximum speedup of 56.7x on 64 processes. The downside of this approach was also noted on low ammount of processes, namely using $N-1$ workers for computation.
+
+
+\end{document}

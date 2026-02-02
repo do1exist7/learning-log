@@ -1,0 +1,412 @@
+% =================================================================
+% This is an assignment report template (in LaTeX) for the following course:
+% PHYS 421 Parallel Computing
+% Instructors: Sergiy Bubin, Bekdaulet Shukirgaliyev
+% Version: 2025.08.10
+% =================================================================
+
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Encoding, fonts, language ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+
+% ---------- Geometry & spacing ----------
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{parskip} % space between paragraphs, no indent
+
+% ---------- Math & symbols ----------
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{siunitx}
+\sisetup{detect-all=true}
+\newcommand{\bigO}{\mathcal{O}}
+
+% ---------- Tables & graphics ----------
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{pgfplotstable} % The main package for reading CSV files
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{mwe} % provides example-image-a
+\usepackage{hologo}
+\usepackage{longtable}
+
+% ---------- Hyperlinks & clever references ----------
+%\usepackage[hidelinks]{hyperref}
+\usepackage[colorlinks=true,urlcolor=blue,bookmarks=true,citecolor=magenta,breaklinks=true,pdftex]{hyperref}
+\usepackage[nameinlink,capitalise]{cleveref}
+
+% ---------- Code listings (default: listings) ----------
+\usepackage{listings}
+\lstdefinestyle{pcstyle}{
+  basicstyle=\ttfamily\footnotesize,  %change \footnotesize to \small if the font in code snippets appears too small for reading
+  numberstyle=\tiny, numbers=left, numbersep=8pt,
+  showstringspaces=false, showtabs=false, showspaces=false,
+  breaklines=true, frame=single, rulecolor=\color{black!20},
+  keywordstyle=\color{blue!90!black},
+  commentstyle=\color{green!65!black},
+  stringstyle=\color{orange!80!black},
+  tabsize=2,
+  captionpos=b
+}
+\lstset{style=pcstyle}
+
+% ---------- Optional: minted for code (requires shell-escape) ----------
+% To use minted on Overleaf: Menu -> Latex -> Enable shell escape.
+% Then uncomment the two lines below and comment out the listings section above.
+% \usepackage[outputdir=_minted,cache=false]{minted}
+% \setminted{fontsize=\small,breaklines,frame=single}
+
+
+% ---------- PGFPlots for plots ----------
+\usepackage{gincltex}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{pgfplotstable}
+\usepackage{lmodern}   % For Latin Modern fonts, which defines \mathdefault
+\def\mathdefault#1{#1}
+\usepgflibrary{plotmarks}
+\usetikzlibrary{calc}
+\usetikzlibrary{positioning,arrows.meta}
+
+% ---------- Bibliography ----------
+% \usepackage[
+%   backend=biber,
+%   style=numeric-comp, % compress ranges like [1–3]
+%   sorting=none,
+%   sortcites=true      % sort inside each \cite{...}
+% ]{biblatex}
+% \addbibresource{references.bib}
+
+% ---------- Utilities ----------
+\usepackage{etoolbox} % for \IfFileExists
+
+% ---------- Custom metadata commands ----------
+% Replace X with the actual assignment number
+\newcommand{\assignmentnumber}{5}
+% Insert actual report title
+\newcommand{\assignmenttitle}{Linear Regression}
+% Insert your name
+\newcommand{\studentname}{Dias Suleimenov}
+% Replace XXXXXXXXX with your actual Student ID
+\newcommand{\studentid}{202158836}
+% Insert course code: PHYS 421, PHYS 521, or PHYS 721
+\newcommand{\coursecode}{PHYS 421}  
+% Insert course name: Parallel Computing or Parallel Programming for Scientific Computing
+\newcommand{\coursename}{Parallel Computing} 
+
+\newcommand{\honor}{I affirm that this work complies with Nazarbayev University academic integrity policies and the policies regarding the use of AI tools outlined in the course syllabus}
+
+% ---------- Title ----------
+\title{Assignment Report \#\assignmentnumber \\ \assignmenttitle}
+\author{Student Name: \studentname \ (ID: \studentid) \\ Course: \coursecode \ \coursename
+}
+\date{Submitted: \today}
+
+% =================================================================
+\begin{document}
+\maketitle
+\begin{center}
+{Software packages used:} \\
+\begin{tabular}{|l|l|}
+\hline
+GCC 13.3.0      & C/C++ compilation \\
+NVCC 13.3.0     & CUDA compilation \\
+Python 3.12.3   & Data generation, analysis, plotting \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+{AI tools used:} \\
+\begin{tabular}{|l|l|}
+\hline
+Gemini 2.5 Pro      & Code generation, script writing \\
+Copilot      & Code generation, script writing, report assistance \\
+\hline
+\end{tabular}
+\end{center}
+\vspace{2em}
+
+\section*{Honor Statement}
+\honor
+% =================================================================
+
+\section{Methodology}
+\subsection{Generation of Data}
+% - Seed & sizes: Fix a random seed. Choose D ∈ 16 , 32 and three N values from 3 × 10 4 , 10 5 , 3 × 10 5 , 10 6 , 10 5 , 3 × 10 6 . Let N max be the largest.
+% - Make one big dataset once (at N max ): X max [ i , j ] ∼ N ( 0 , 1 ) . Draw β ⋆ ∼ N ( 0 , 1 ) . Add Gaussian noise ε ∼ N ( 0 , σ 2 ) and set y max = X max β ⋆ + ε . (Practical choice: pick σ to yield R 2 ≈ 0.85 − 0.95 on a hold-out; report the value used.)
+% - (Optional but recommended) Standardize features: Zero-mean and unit-variance each column of X max . Apply the same scaling to all subsamples.
+% - Subsample for smaller N : For each smaller N , sample row indices S N uniformly without replacement and set X N = X max [ S N , : ] , y N = y max [ S N ] . Save S N for reproducibility.
+% - Report: seed, D , N , σ , achieved R 2 , and whether standardization was applied.
+
+The synthetic datasets for linear regression benchmarks were generated using the following procedure.
+
+
+Random seed = 42 was fixed. $D = 32$ was chosen and $N \in \{3\times 10^4, 10^5,3\times10^5,10^6, 10^5,3\times10^6\}$ was took. Let $N_{\max}$ be the largest. Then largest dataset with $N_{\max}$ samples was generated and smaller datasets were obtained by subsampling.
+
+The steps of generation as follows:
+\begin{itemize}
+    \item $X_{\max}[i,j] \sim \mathcal N(0,1)$. 
+    \item $\beta_\star \sim \mathcal N(0,1)$.
+    \item Added Gaussian noise $\varepsilon \sim \mathcal N(0,\sigma^2)$ and set $y_{\max} = X_{\max}\beta_\star + \varepsilon$.
+    \item Scaling was applied to zero-mean and unit-variance each column of $X_{\max}$. 
+    \item For each smaller $N$, sampled row indices $S_N$ uniformly without replacement and set
+  $X_N = X_{\max}[S_N,:]$, $y_N = y_{\max}[S_N]$. 
+   \item Each subsamples was saved for reproducibility.
+\end{itemize}
+
+With $\sigma = 1.9635$, on hold-out $R^2 \approx 0.9$ was achieved.
+
+\subsection{Measuring Performance}
+% - 3 warmup runs before timing. 10 timing runs, report the average + stdev.
+% - CPU time using std::chrono::steady_clock 
+% - GPU E2E time using std::chrono::steady_clock with starting before data transfer to device and ending after data transfer back to host.
+% - GPU kernel time using CUDA events with starting before kernel launch and ending after kernel completion.
+
+For performance measurements, 3 warmup runs were performed before timing. Then, 10 timing runs were conducted, and the average and standard deviation were reported. For CPU time measurement, \verb|std::chrono::steady_clock| was used. For GPU end-to-end (E2E) time measurement, \verb|std::chrono::steady_clock was used|, starting before data transfer to the device and ending after data transfer back to the host. For GPU kernel time measurement, CUDA events were used, starting before kernel launch and ending after kernel completion.
+
+
+\subsection{Vector Benchmark}
+The following parameteres were chosen for benchmarking DOT and SAXPY operations, $N = 10^3, \dots,  3\times10^6$ with increment of $10^6$; $D=32$.
+
+\subsubsection{DOT and SAXPY kernel implementations}
+SAXPY Kernel was launched with 256 threads per block and $\left\lceil N/256 \right\rceil$ blocks to cover all data. Each thread computed the SAXPY operation for its assigned elements. 
+
+DOT Kernel was launched with 256 threads per block and $\left\lceil N/256 \right\rceil$ blocks to cover all data. Each thread computed partial sum for its assigned elements and stored it in shared memory. A parallel reduction was performed within each block to compute the block-level sum, which was then written to global memory. Finally, a second kernel was launched to sum the block-level results to obtain the final dot product.
+
+The CPU implementation for both SAXPY and DOT used a simple for loop to iterate over the elements of the vectors and perform the respective operations.
+
+\subsection{Linear Regression}
+% - CPU serial FBGD: one thread; same math as GPU; -O3 -march=native.
+% - GPU FBGD: your kernels for X β , X T r , axpy/scal/dot, norms; data resident on device between iterations.
+
+% - Synthetic data {30000, 100000, 300000 , 1000000} for D=32 was chosen
+
+% Convergence Choose a fixed stepsize η after a quick tiny-case trial (or simple backtracking). Use the same η for the scaling study at a given D . Stop when | g | 2 / | g 0 | 2 < 10 - 4 or at a clear max-iter (report both η and iterations).
+
+% Stopping criteria: relative gradient norm < $10^$ or max-iter = 10000. Relative gradient norm checked every 100 iterations to reduce overhead. In GPU the pinned memory was used to transfer the gradient norm from device to host for checking the stopping criteria.
+
+The FBGD algorithm worked in the following way on each iteration:
+\begin{enumerate}    
+    \item Prediction: $\hat y \leftarrow X\beta$
+    \item Residual: $r \leftarrow \hat y - y$
+    \item Gradient: $g \leftarrow X^{\mathsf T}r$
+    \item Update: $\beta \leftarrow \beta - \eta g$
+\end{enumerate}
+With stopping criteria: $|g|_2/|g_0|_2 < 10^{-4}$ or after a maximum number of iterations = 1000. The relative gradient norm was checked every 100 iterations to reduce overhead. In GPU implementation, pinned memory was used to transfer the gradient norm from device to host for checking the stopping criteria, without use of \verb|cudaMemcpy| calls.
+
+The learning rate $\eta = 10^{-6}$ was chosen after preliminary experiments on small datasets to ensure convergence. The small learning rate was necessary due to the exploding gradients observed with larger $\eta$ values.
+
+All arrays were kept resident on the GPU between iterations to minimize data transfer overhead. Transposed matrix vector multiplication $X^{\mathsf T}r$ was implemented using a custom kernel that used coalesced memory accesses and shared memory tiling for partial sums to optimize performance. The matrix-vector multiplication $X\beta$ was implemented using a similar approach. The \verb|__reduce_add_sync| single-instruction warp-wide reduction was used for efficient reduction operations in $X^{\mathsf T}r$ and $X\beta$ implementations.
+
+\subsubsection{GFLOPS calculation}
+% - GFLOPS. For FBGD was assumed 4ND operations per iteration
+For FBGD, it was assumed that each iteration involves $4ND$ floating-point operations (FLOPs): $2ND$ for the matrix-vector multiplication $X\beta$, $2ND$ for the matrix-vector multiplication $X^{\mathsf T}r$, and negligible FLOPs for vector additions and scalar multiplications. The GFLOPS was calculated as:
+\[\text{GFLOPS} = \frac{4ND \times \text{Number of Iterations}}{\text{Total Time (seconds)} \times 10^9}\].
+
+
+\subsection{Real-Data Application}
+% - Dataset: California housing dataset from sklearn.datasets.
+% - Preprocessing: Standardize features to zero mean and unit variance. Split into training (80\%) and testing (20\%) sets.
+% - Model Training: Implement FBGD on GPU to train linear regression model on training set.
+% - Evaluation: Evaluate model performance on testing set using R² score and Mean Squared Error (MSE).
+% - Comparison: Compare GPU FBGD results with CPU serial implementation and sklearn's LinearRegression.
+
+% eta = FIX, max-iter = 10000
+
+Dataset from \verb|sklearn.datasets| was used. Features were standardized to zero mean and unit variance. The dataset was split into training (80\%) and testing (20\%) sets. The bias trick was applied by adding a column of ones to the feature matrix. Model was trained using FBGD on GPU on training set with $\eta = 5\times10^{-5}$ and maximum iterations = 10000. Model performance was evaluated on testing set using $R^2$ score and Root Mean Squared Error (RMSE). The results from GPU FBGD were compared with CPU serial implementation and \verb|sklearn|'s \verb|LinearRegression|. Resulting training set featured D = 9, N = 16512 samples.
+
+\subsection{Correctness \& Fairness}
+
+
+All implementations had the same update rule, the same stepsize. The same float32 datatype. The same datasets and preprocessing steps were used across all implementations to ensure a fair comparison. Performance measurements were conducted under similar conditions, with multiple runs to account for variability.
+
+The GPU FBGD implementations were validated against CPU implementation and ground truth $\beta_*$. With tolerance $|\beta_\text{GPU} - \beta_\text{CPU}|_\infty < 2\times10^{-7}$ for N = 30000, D=32 and $|\beta_\text{GPU} - \beta_*|_\infty < 5\times10^{-2}$.
+
+% Running FBGD test for N = 30000, D = 32
+% CPU vs Optimized E2E           - Max Abs Error: 1.192093e-07, Max Rel Error: 1.166873e-07
+% CPU vs Optimized Kernel        - Max Abs Error: 2.384186e-07, Max Rel Error: 1.759560e-07
+% Ground Truth vs CPU            - Max Abs Error: 4.189944e-02, Max Rel Error: 1.173817e-01
+
+\subsection{Environment \& Reproducibility}
+Experiments were conducted on a HPC node with the following specifications:
+\begin{itemize}
+    \item CPU: AMD EPYC 9654 @ 2.30GHz
+    \item GPU: Nvidia V100 GPU (32 GB HBM2)
+    \item RAM: 256 GB DDR4-2933 RAM (8-channel) 
+    \item OS: Rocky Linux 8.10
+    \item Compiler: GCC 13.3.0 with -O3 optimization
+    \item Compiler: nvcc 13.3.0 with -O3 optimization
+    \item CUDA Toolkit: 12.8.0
+    \item Python 3.12.3 with NumPy 2.3.4 and scikit-learn 1.7.2 for data generation and analysis
+\end{itemize}
+
+The cluster used was Slurm NVIDIA partition of Shabyt cluster with the following flags:
+\begin{itemize}
+    \item \verb|--gres=gpu:1|
+    \item \verb|--cpus-per-task=1|
+\end{itemize}
+
+Seed = 42 was used for all random number generation to ensure reproducibility. For data generation, the script \verb|scripts/generate_data.py| was used. The main benchmarking code is in \verb|src/part1.cu|. Dataset for real data application was generated by \verb|scripts/regression.py| and the main code for real data application \verb|src/par2.cu| was used.
+
+In order to reproduce the results, follow these steps in a terminal:
+\begin{lstlisting}
+# 0. Set up environment with specified compiler versions and libraries
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# 0.5 Load necessary modules (if using a cluster with module system)
+module load GCCcore/13.3.0
+module load CUDA/12.8.0
+module load Python/3.12.3-GCCcore-13.3.0
+
+# 1. Generate synthetic datasets
+python scripts/generate_data.py
+python scripts/regression.py
+
+# 2. Compile the CUDA code
+make all
+
+# 3. Run benchmarks for individual parts locally (optional)
+./bin/part0        # Vector benchmark
+./bin/fbgd         # FBGD benchmark
+./bin/part2        # Real-data application
+
+# 3.5 To run benchmarks for all parts on the cluster
+sbatch scripts/run_part0.slurm # Vector benchmark
+sbatch scripts/run_fbgd.slurm  # FBGD benchmark
+sbatch scripts/run_part2.slurm # Real-data application
+
+# 4. Generate plots from the results
+python scripts/generate_plots.py
+\end{lstlisting}
+
+\section{Results} 
+\subsection{Vector Benchmark}
+\begin{figure}[H]
+    \centering
+    \scalebox{0.3}{\input{figures/dot_performance_plot.pgf}}
+    \scalebox{0.3}{\input{figures/saxpy_performance_plot.pgf}}
+    \scalebox{0.3}{\input{figures/dot_speedup_plot.pgf}}
+    \scalebox{0.3}{\input{figures/saxpy_speedup_plot.pgf}}
+    
+    \caption{Performance comparison of CPU and GPU implementations for DOT and SAXPY operations across varying vector sizes $N$. The plots show execution time (ms) and GFLOPS achieved for each operation.}
+    \label{fig:vector_benchmark}
+\end{figure}
+\subsection{Linear Regression Benchmark}
+\begin{figure}[H]
+    \centering
+    \scalebox{0.45}{\input{figures/fgbd_performance_plot.pgf}}
+    \scalebox{0.45}{\input{figures/fgbd_speedup_plot.pgf}}
+    \scalebox{0.45}{\input{figures/fgbd_gflops_plot.pgf}}
+    \caption{Performance comparison of CPU and GPU implementations for FBGD across varying dataset sizes $N$ with fixed feature dimension $D=32$. The plots show execution time (ms) and GFLOPS achieved for each implementation.}
+    \label{fig:fbgd_benchmark}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \scalebox{0.6}{\input{figures/fbgd_convergence_plot.pgf}}
+    \caption{Convergence behavior of FBGD on GPU for dataset with $N = 30000$ with fixed feature dimension $D=32$. The plot shows the relative gradient norm over iterations, indicating convergence to the optimal solution.}
+    \label{fig:fgbd_convergence}
+\end{figure}
+
+\section{Real-Data Application}
+\begin{figure}
+    \centering
+    \scalebox{0.6}{\input{figures/housing_convergence_plot.pgf}}
+    \caption{Convergence behavior of FBGD on GPU for California housing dataset with $N = 16512$ samples and $D=9$ features. The plot shows the relative gradient norm over iterations, indicating convergence to the optimal solution.}
+\end{figure}
+
+
+% 1. RUNTIME TABLE (Total time for one training run)
+
+% Method               Time (ms)     Iterations
+% ---------------------------------------------
+% Serial (CPU)            49.760            200
+% GPU Kernel-Only        239.734            200
+% GPU End-to-End         207.887            200
+
+
+% 2. ACCURACY (Using final CPU-trained model)
+
+% TRAINING SET ACCURACY:
+%   - Training Residual Norm ||X_train*beta - y_train||^2: 8552.084
+%   - Training RMSE: 0.720
+%   - Training R-squared: 0.613
+
+% TEST SET ACCURACY (HELD-OUT):
+%   - Test Residual Norm ||X_test*beta - y_test||^2:  2294.742
+%   - Test RMSE: 0.746
+%   - Test R-squared: 0.576
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcccc}
+    \toprule
+    Implementation & Time & Iterations & $R^2$ Score & RMSE\\
+    \midrule
+    CPU Serial & 39.494 ms & 200 & 0.576 & 0.746 \\
+    GPU Kernel-Only & 18.079 ms & 200 & - & - \\
+    GPU End-to-End & 18.166 ms & 200 & - & - \\
+    \verb|sklearn| LinearRegression & 2.223 ms & - & 0.576 & 0.746 \\
+    \bottomrule
+    \end{tabular}
+    \caption{Performance comparison of different implementations on the California housing dataset. The table shows the $R^2$ score and Root Mean Squared Error (RMSE) for implementation on the testing set.}
+\label{tab:real_data_performance}
+
+\end{table}
+
+% --- Running Serial (CPU) Training ---
+% CPU Converged at epoch 6100
+% Ground Truth vs CPU            - Max Abs Error: 2.674639e-03, Max Rel Error: 3.321791e-02
+
+% --- Running GPU Kernel-Only Training ---
+% GPU Kernel Converged at epoch 6100
+% Ground Truth vs GPU Kernel     - Max Abs Error: 2.674580e-03, Max Rel Error: 3.322074e-02
+
+% --- Running GPU E2E Training ---
+% GPU E2E Converged at epoch 6100
+% Ground Truth vs GPU E2E        - Max Abs Error: 2.674580e-03, Max Rel Error: 3.322044e-02
+
+
+With difference between CPU and GPU implementations and sklearn LinearRegression within tolerance of $3\times10^{-2}$.
+
+\section{Discussion}
+
+\section{Vector Benchmark}
+% Mini-writeup (1–2 pages): explain the crossover (why GPU loses for tiny N and wins as N grows), and the gap between kernel-only and end-to-end (launch + transfer overheads).
+The vector benchmark results in \cref{fig:vector_benchmark} show the performance comparison between CPU and GPU implementations for DOT and SAXPY operations across varying vector sizes $N$. For small vector sizes, the CPU outperforms the GPU (E2E) due to the overhead associated with data transfer and kernel launch on the GPU. As $N$ increases, the GPU's parallel processing capabilities allow it to outperform the CPU, leading to significant speedups. The gap between kernel-only and end-to-end performance highlights the impact of data transfer overheads, which become less significant as the computation time increases with larger $N$. But as operations of DOT and SAXPY are relatively fast, the overheads remain significant even at larger $N$. The maximum speedup achieved was around 20x for SAXPY operation and 50x for DOT operation at the largest vector sizes tested. The fluctuation in saxpy graph, may be due to variability in GPU load or other system factors during benchmarking.
+
+\section{Linear Regression Benchmark}
+% Short analysis: discuss when and why the GPU overtakes CPU (arithmetic intensity, coalesced access, amortized overheads), and the gap between GPU end-to-end vs kernel-only.
+From the \cref{fig:fbgd_benchmark}, it can be seen that the GPU overtakes the CPU in FBGD performance as $N$ increases due to the higher arithmetic intensity of the matrix-vector multiplications involved in FBGD. The GPU's architecture is well-suited for handling large-scale parallel computations, allowing it to efficiently process the large datasets used in linear regression. Coalesced memory access patterns and shared memory optimizations further enhance the GPU's performance. The gap between GPU end-to-end and kernel-only performance is primarily due to data transfer overheads between the host and device. However, as the dataset size increases, these overheads become less significant relative to the computation time, leading to improved overall performance. The maximum speedup achieved was around 65x at the largest dataset size tested. And 42 GFLOPS was achieved at $N = 3\times10^6$.
+
+Also it can be noted from \cref{fig:fgbd_convergence} that convergence behavior of FBGD on GPU for dataset with $N = 30000$ with fixed feature dimension $D=32$ shows steady decrease in relative gradient norm over iterations, indicating effective convergence to the optimal solution.
+
+\section{Real-Data Application}
+% Reflect on stability on application to real data
+% Reflection (short): stepsize & iterations used; any conditioning/stability observations; how results differ from synthetic.
+The real-data application results in \cref{tab:real_data_performance} demonstrate the performance of different implementations on the California housing dataset. The GPU implementations (both kernel-only and end-to-end) significantly outperform the CPU serial implementation, achieving speedups of over 2x. The \verb|sklearn| LinearRegression implementation is the fastest due to its highly optimized algorithms and libraries, having execution time 9x faster than self-written. Also the performance of NumPy library can be explained by relatively small dataset size, where the overhead of GPU data transfer and kernel execution outweighs the benefits of parallel computation.
+
+The convergence plot for the California housing dataset shows that the FBGD algorithm effectively converges to the optimal solution within 200 iterations. The algorithm converged in 200 iterations with learning rate $5\times10^{-5}$, well before the specified maximum cap of 10000, with the relative gradient norm decreasing steadily over iterations. The results from the GPU implementations closely match those from the CPU implementation and \verb|sklearn| LinearRegression, with differences within a tolerance of $3\times10^{-2}$. During the testing it was noted, that larger stepsizes led to exploding gradients and divergence, highlighting the importance of careful stepsize selection for stability. In comparison the FBGD on synthetic dataset with N=30000, D=32 was stable with higher stepsize of $6\times10^{-5}$, indicating that real-world datasets may require more accurate tuning.
+
+
+\section{Conclusion}
+In this report, the performance of CPU and GPU implementations for vector operations (DOT and SAXPY) and linear regression using FBGD was benchmarked. The GPU implementations demonstrated significant speedups over the CPU as dataset sizes increased, showcasing the advantages of parallel processing for large-scale computations. The real-data application on the California housing dataset further validated the effectiveness of the GPU implementations, achieving comparable accuracy to established libraries like \verb|sklearn| LinearRegression. The following speedup were achieved:
+\begin{itemize}
+    \item Up to 50x speedup for DOT operation at largest vector sizes.
+    \item Up to 20x speedup for SAXPY operation at largest vector sizes.
+    \item Up to 65x speedup for FBGD at largest dataset size.
+    \item Over 2x speedup for real-data application on California housing dataset.
+    \item 42 GFLOPS achieved for FBGD at $N = 3\times10^6$.
+\end{itemize}
+
+Also, the importance of careful stepsize selection for stability in FBGD was highlighted, with the chosen stepsize leading to effective convergence across both synthetic and real datasets.
+\end{document}

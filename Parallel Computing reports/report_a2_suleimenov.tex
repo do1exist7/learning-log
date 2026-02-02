@@ -1,0 +1,251 @@
+% =================================================================
+% This is an assignment report template (in LaTeX) for the following course:
+% PHYS 421 Parallel Computing
+% Instructors: Sergiy Bubin, Bekdaulet Shukirgaliyev
+% Version: 2025.08.10
+% =================================================================
+
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Encoding, fonts, language ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[english]{babel}
+
+% ---------- Geometry & spacing ----------
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{parskip} % space between paragraphs, no indent
+
+% ---------- Math & symbols ----------
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{siunitx}
+\sisetup{detect-all=true}
+\newcommand{\bigO}{\mathcal{O}}
+
+% ---------- Tables & graphics ----------
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{pgfplotstable} % The main package for reading CSV files
+\usepackage{float}
+\usepackage{subcaption}
+\usepackage{mwe} % provides example-image-a
+\usepackage{hologo}
+
+% ---------- Hyperlinks & clever references ----------
+%\usepackage[hidelinks]{hyperref}
+\usepackage[colorlinks=true,urlcolor=blue,bookmarks=true,citecolor=magenta,breaklinks=true,pdftex]{hyperref}
+\usepackage[nameinlink,capitalise]{cleveref}
+
+% ---------- Code listings (default: listings) ----------
+\usepackage{listings}
+\lstdefinestyle{pcstyle}{
+  basicstyle=\ttfamily\footnotesize,  %change \footnotesize to \small if the font in code snippets appears too small for reading
+  numberstyle=\tiny, numbers=left, numbersep=8pt,
+  showstringspaces=false, showtabs=false, showspaces=false,
+  breaklines=true, frame=single, rulecolor=\color{black!20},
+  keywordstyle=\color{blue!90!black},
+  commentstyle=\color{green!65!black},
+  stringstyle=\color{orange!80!black},
+  tabsize=2,
+  captionpos=b
+}
+\lstset{style=pcstyle}
+
+% ---------- Optional: minted for code (requires shell-escape) ----------
+% To use minted on Overleaf: Menu -> Latex -> Enable shell escape.
+% Then uncomment the two lines below and comment out the listings section above.
+% \usepackage[outputdir=_minted,cache=false]{minted}
+% \setminted{fontsize=\small,breaklines,frame=single}
+
+
+% ---------- PGFPlots for plots ----------
+\usepackage{gincltex}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{pgfplotstable}
+\usepackage{lmodern}   % For Latin Modern fonts, which defines \mathdefault
+\def\mathdefault#1{#1}
+\usepgflibrary{plotmarks}
+\usetikzlibrary{calc}
+\usetikzlibrary{positioning,arrows.meta}
+
+% ---------- Bibliography ----------
+% \usepackage[
+%   backend=biber,
+%   style=numeric-comp, % compress ranges like [1–3]
+%   sorting=none,
+%   sortcites=true      % sort inside each \cite{...}
+% ]{biblatex}
+% \addbibresource{references.bib}
+
+% ---------- Utilities ----------
+\usepackage{etoolbox} % for \IfFileExists
+
+% ---------- Custom metadata commands ----------
+% Replace X with the actual assignment number
+\newcommand{\assignmentnumber}{2}
+% Insert actual report title
+\newcommand{\assignmenttitle}{Monte-Carlo estimation of the volume of an $n$-dimensional $\ell^p$ sphere}
+% Insert your name
+\newcommand{\studentname}{Dias Suleimenov}
+% Replace XXXXXXXXX with your actual Student ID
+\newcommand{\studentid}{202158836}
+% Insert course code: PHYS 421, PHYS 521, or PHYS 721
+\newcommand{\coursecode}{PHYS 421}  
+% Insert course name: Parallel Computing or Parallel Programming for Scientific Computing
+\newcommand{\coursename}{Parallel Computing} 
+
+\newcommand{\honor}{I affirm that this work complies with Nazarbayev University academic integrity policies and the policies regarding the use of AI tools outlined in the course syllabus}
+
+% ---------- Title ----------
+\title{Assignment Report \#\assignmentnumber \\ \assignmenttitle}
+\author{Student Name: \studentname \ (ID: \studentid) \\ Course: \coursecode \ \coursename
+}
+\date{Submitted: \today}
+
+% =================================================================
+\begin{document}
+\maketitle
+
+\begin{center}
+{Software packages used:} \\
+\begin{tabular}{|l|l|}
+\hline
+g++ 13.2.0               &  Main code \\
+OpenMP 4.5          &  Parallelization \\
+Matplotlib 3.8.0          &  Plotting   \\
+Jupyter Notebook    &  Data analysis    \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{center}
+{AI tools used:} \\
+\begin{tabular}{|l|l|}
+\hline
+Github Copilot      & Coding assistance \\
+Gemini 2.5 Pro      & Help in conceptual understanding and refining of writing \\
+\hline
+\end{tabular}
+\end{center}
+\vspace{2em}
+
+\begin{abstract}
+
+The performance of parallelized and serial Monte-Carlo algorigthm for estimating volume of $n$-dimensional $\ell^p$-sphere was made. Maximum 3.22 times speedup of parallelized algorigthm was measured. Perfomative equivalence of static and dynamic scheduling was observed. 
+\noindent 
+
+\end{abstract}
+
+% =================================================================
+
+\section{Introduction}
+
+A $n$-dimensional ball in the $\ell^p$ space is defined as (where $p > 0$): 
+$$ 
+|x_1|^p + |x_2|^p + \ldots + |x_n|^p \le R^p.
+$$
+
+By means of analysis it can be shown that the volume of $n$-dimensional ball in $\ell^p$ space with radius $R$ is equal to:
+$$
+V_n^p (R) = \frac{\left[ 2 \Gamma(1+1/p) \right]^n}{\Gamma (1 + n/p)} R^n.
+$$
+
+However, one might estimate the volume of $\ell^p$-sphere using the Monte-Carlo method. By emdedding sphere in hypercube of the same diameter. And then number of hits $h$ of uniformly randomly distrubuted points in hypercube can be calculated. And using that, volume can be estimated as:
+$$
+V_n^p (R) \approx \frac{h}{N} (2R)^n .
+$$
+
+The standard error of such Monte-Carlo approaches behaves like $\mathcal{O}(1/\sqrt{N})$.
+
+This reports investigates performance of parallelized Monte-Carlo method compared to the single-threaded single threaded implementation. Relationtship between time performance, error and number of threads and trials is measured and discussed.
+
+\section{Methodology}
+
+Serialized and parallelized Monte-Carlo method for estimating the volume of $\ell^p$ sphere was implemented using OpenMP 4.5 and C++11. To guarantee thread-safety instances of random generators were run inside the threads. By \verb|omp_get_wtime()| from OpemMP library, time performance of methods was measured. The scheduling and chunk size and number threads was defined by envirnoment variables.  
+T_
+The standard error for the estimated volume was derived within a probabilistic framework. Each sample point evaluation constitutes an independent Bernoulli trial, where the outcome is a "success" if the point lies within the $\ell^p$-sphere and a "failure" otherwise. Consequently, the total count of successful trials over $N$ samples follows a Binomial distribution. Estimated proportion of hits $\hat{p}$ have the standard deviation of $\sqrt{\frac{p(1-p)}{N}}$. The estimated volume then equals $V_\text{box} \cdot \hat{p}$, where $V_\text{box} = (2R)^n$. Putting altogether it can be derived that standard deviation of volume is $\sqrt{\frac{V_\text{box} V - V^2}{N}}$.
+
+\section{Results}
+
+\begin{figure}[H]
+    \centering
+    \input{figures/error_vs_samples.pgf}
+    \caption{Relative error versus the number of samples for sphere with dimension $n = 10$, norm $p = 4$ and radius $R = 1$, with number of samples varying $N = 10^5, 2 \times 10^5, \ldots, 4.096 \times 10^8$.}
+    \label{fig:error_vs_samples}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \input{figures/speedup_vs_threads.pgf}
+    \caption{The speedup factor versus the number of threads for sphere with dimension $n = 10$, norm $p = 4$ and radius $R = 1$, number of samples $N = 5 \times 10^6$ and number of threads varying from 1 to 8.}
+    \label{fig:speedup_vs_threads}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \input{figures/schedule_performance_vs_threads.pgf}
+    \caption{The comparison of performance of parallelization under static and dynamic scheduling strategy for sphere with dimension $n = 10$, norm $p = 4$ and radius $R = 1$, number of samples $N = 5 \times 10^6$ and number of threads varying from 1 to 8.}
+    \label{fig:schedule_performance_vs_threads}
+\end{figure}
+
+\begin{table}
+    \begin{tabular}{l|cccc}
+    \toprule
+    Number Threads & Serial Time & Parallel Time & Speedup & Efficiency \\
+    
+    \hline
+    1 & 1.393237 & 1.356019 & 1.027446 & 1.027446 \\
+    2 & 1.393237 & 0.737777 & 1.888426 & 0.944213 \\
+    3 & 1.393237 & 0.590847 & 2.358034 & 0.786011 \\
+    4 & 1.393237 & 0.500212 & 2.785290 & 0.696323 \\
+    5 & 1.393237 & 0.433204 & 3.216118 & 0.643224 \\
+    6 & 1.393237 & 0.453095 & 3.074934 & 0.512489 \\
+    7 & 1.393237 & 0.426079 & 3.269898 & 0.467128 \\
+    8 & 1.393237 & 0.519195 & 2.683455 & 0.335432 \\
+    \bottomrule
+    \end{tabular}
+    \caption{The speedup factor and efficiency in relation to number of threads for sphere with dimension $n = 10$, norm $p = 4$ and radius $R = 1$, number of samples $N = 5 \times 10^6$}
+    \label{tab:asdasd}
+
+\end{table}
+
+
+\begin{table}[H]
+    \begin{tabular}{l|cccc}
+    \toprule
+    Dimensions & Monte-Carlo Volume & Analytical Volume & Error & Estimated Error \\
+    \hline
+    2 & 3.142532 & 3.141593 & 0.000939 & 0.000734 \\
+    3 & 4.189376 & 4.188790 & 0.000586 & 0.001787 \\
+    4 & 4.929168 & 4.934802 & 0.005634 & 0.003304 \\
+    5 & 5.257600 & 5.263789 & 0.006189 & 0.005303 \\
+    6 & 5.146240 & 5.167713 & 0.021473 & 0.007783 \\
+    7 & 4.747392 & 4.724766 & 0.022626 & 0.010818 \\
+    8 & 4.069632 & 4.058712 & 0.010920 & 0.014320 \\
+    9 & 3.334656 & 3.298509 & 0.036147 & 0.018419 \\
+    10 & 2.554880 & 2.550164 & 0.004716 & 0.022846 \\
+    \bottomrule
+    \end{tabular}
+
+    \caption{The comparison between the absolute error and estimated error of volume obtained analytically versus by Monte-Carlo method, for the sphere of radius $R = 1$, norm $p = 2$, number of sample $N = 10^5$ and dimensions varying from 2 to 10.}
+    \label{tab:monte_vs_analytical}
+\end{table}
+
+\section{Discussion}
+The results from the Figure \ref{fig:error_vs_samples} confirms that the absolute error of the Monte-Carlo estimation of volume decreases as $\bigO \left( \frac{1}{\sqrt{N}} \right)$. 
+
+The Table \ref{tab:monte_vs_analytical} confirms the formula derived at Methodology section. The error grows approximately the same as the formula and almost all errors in bounds of theoretical error prediction.
+
+While the parallelization indeed gives significant performance boost, the speedup does not scale linearly. After parallelization on 5 threads the speedup is plateauing. Parallelization achieves the highest speedup of 3.22 times compared to the single-threaded version. The most efficient scaling, in terms of performance gain per thread, was observed with two and three threads.
+
+A comparison between OpenMP scheduling strategies showed that static and dynamic schedules yielded nearly identical runtimes. This result is expected, since the Monte-Carlo algorigthm does not create disbalanced utilization of cores, since each thread have equal job. Through empirical testing it was found that parallelization of used Monte-Carlo algorigthm is mostly indifferent to used chunk size.
+
+\section{Conclusion}
+The parallelized implementation of the Monte-Carlo algorithm successfully accelerated the volume estimation, achieving a maximum speedup of 3.22 times over the serial version. It was also determined that both static and dynamic scheduling policies are equally effective due to the balanced nature of the computational workload. The $\bigO \left( \frac{1}{\sqrt{N}} \right)$ asymptotic decline of the Monte Carlo method's absolute error was empirically confirmed. 
+
+\end{document}
